@@ -31,37 +31,62 @@ class Wancak {
 
     static getCookie = async (username, password) => {
         try {
-            return 'TO DO // getCookie()'
-            // let nndasmumu = {
-            //     'Cache-Control': 'max-age=0',
-            //     'Connection': 'keep-alive',
-            //     'Upgrade-Insecure-Requests': 1,
-            //     'Origin': 'https://1cak.com',
-            //     'Content-Type': 'application/x-www-form-urlencoded',
-            //     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.74 Safari/537.36',
-            //     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-            //     'Sec-GPC': 1,
-            //     'Sec-Fetch-Site': 'same-origin',
-            //     'Sec-Fetch-Mode': 'navigate',
-            //     'Sec-Fetch-User': '?1',
-            //     'Sec-Fetch-Dest': 'document',
-            //     'Referer': 'https://1cak.com/login',
-            //     'Accept-Encoding': 'gzip, deflate, br',
-            //     'Accept-Language': 'en-US,en;q=0.9',
-            //     'Cookie': '__utmz=222692187.1647728193.2.2.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); __utma=222692187.1871807472.1647429730.1647728193.1647882456.3; __utmc=222692187; PHPSESSID=2004jbql2h3ieab88cghbmt8h0; __utmt=1; __utmb=222692187.24.10.1647882456'
+            const headers = {
+                accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "accept-language": "en-US,en;q=0.9,id-ID;q=0.8,id;q=0.7",
+                "cache-control": "max-age=0",
+                "content-type": "application/x-www-form-urlencoded",
+                "sec-ch-ua":
+                    '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+                "sec-fetch-dest": "document",
+                "sec-fetch-mode": "navigate",
+                "sec-fetch-site": "same-origin",
+                "sec-fetch-user": "?1",
+                "upgrade-insecure-requests": "1",
+                Referer: "https://1cak.com/login",
+            };
 
-            // }
-            // const lojin = await axios.get('https://1cak.com/login')
-            // let user = /<input name="(.*?)" id="inputUsername"/g.exec(lojin.data)[1]
+            // First get the login page to get the dynamic username field name
+            const lojin = await axios.get("https://1cak.com/login");
+            const usernameField =
+                /<input name="(.*?)" id="inputUsername"/g.exec(lojin.data)[1];
 
-            // const res = await axios.post('https://1cak.com/auth&redirect=',
-            //     `${user}=${username}&password=${encodeURIComponent(password)}&Submit=Login`,
-            //     {
-            //         headers: nndasmu
-            //     }
-            // )
+            // Prepare login form data
+            const formData = `${usernameField}=${encodeURIComponent(
+                username
+            )}&password=${encodeURIComponent(password)}&Submit=Login`;
+
+            const res = await axios.post(
+                "https://1cak.com/auth&redirect=",
+                formData,
+                {
+                    headers: headers,
+                    maxRedirects: 0, // Prevent following redirects
+                    validateStatus: (status) => status < 400 || status === 302, // Accept 302 redirect
+                }
+            );
+
+            if (!res.headers["set-cookie"]) {
+                throw new Error("Login failed - No cookies returned");
+            }
+
+            // Extract and combine cookies
+            const cookies = res.headers["set-cookie"]
+                .map((cookie) => cookie.split(";")[0])
+                .join("; ");
+
+            return cookies;
         } catch (error) {
-            console.log(error);
+            if (error.response?.status === 302) {
+                // Success - login redirect received
+                return error.response.headers["set-cookie"]
+                    .map((cookie) => cookie.split(";")[0])
+                    .join("; ");
+            }
+            console.error("Error in getCookie:", error.message);
+            return null;
         }
     }
 
