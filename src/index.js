@@ -98,40 +98,121 @@ class Wancak {
     async section(mode = 'vote') {
         try {
             if (/vote|legendary|lol|trending/g.test(mode)) {
-                const res = await axios.get(BASE_URL + '/' + mode, { headers: this.#headers })
-                let dom = new JSDOM(res.data).window.document
-                let asu = [...dom.getElementById('content').querySelectorAll('div[style="border-bottom:1px solid #ccc;padding-bottom:10px;padding-top:10px"]')]//.map(x => x.querySelector('img')).filter(x => x !== null)
+                const res = await axios.get(BASE_URL + "/" + mode, {
+                    headers: this.#headers,
+                });
+                let dom = new JSDOM(res.data).window.document;
 
-                let data = []
+                let asu = [
+                    ...dom
+                        .getElementById("content")
+                        .querySelectorAll(
+                            'div[style="border-bottom:1px solid #ccc;padding-bottom:10px;padding-top:10px"]'
+                        ),
+                ];
+
+                let data = [];
                 for (let x of asu) {
-                    let gif = x.querySelector('div.giphy_div') == null ? null : x.querySelector('div.giphy_div').innerHTML
-                    let image = x.querySelector('img')
-                    let media = gif !== null ? await this.#getVideo(gif) : image !== null ? image.getAttribute('src') : null
-                    data.push({
-                        date: x.querySelector('abbr').getAttribute('title'),
-                        title: x.querySelector('a[target="_blank"] > h3').textContent,
-                        media: media !== null && media.startsWith('/') ? BASE_URL + media : media,
-                        //media: x.querySelector('source') !== null ? x.querySelectorAll('source')[1].getAttribute('src') == null ? null : x.querySelectorAll('source')[1].getAttribute('src') : x.querySelector('a[target="_blank"]').innerHTML,
-                        source: x.querySelectorAll('div.blur')[1].textContent,
-                        vote: x.querySelector('div[style="margin-top:5px;cursor:pointer"]').querySelector('span').textContent,
-                        post: x.getElementsByTagName('fb:comments-count')[0].getAttribute('href'),
-                        gif: x.querySelector('div.giphy_div') !== null ? true : false,
-                        nsfw: /Not safe for work|Not save for work/g.test(x.innerHTML),
-                        author: {
-                            user: x.querySelector('a[style="display:inline;background:none"] > b') !== null ? x.querySelector('a[style="display:inline;background:none"] > b').textContent.trim() : null,
-                            url: x.querySelector('a[style="display:inline;background:none"]') !== null ? BASE_URL + x.querySelector('a[style="display:inline;background:none"]').getAttribute('href') : null,
+                    let gif =
+                        x.querySelector("div.giphy_div") == null
+                            ? null
+                            : x.querySelector("div.giphy_div").innerHTML;
+                    let image = x.querySelector("img");
+                    let media =
+                        gif !== null
+                            ? await this.#getVideo(gif)
+                            : image !== null
+                            ? image.getAttribute("src")
+                            : null;
+
+                    // --- Logic untuk Vote Count ---
+                    let voteValue = "0"; // Nilai default jika elemen tidak ditemukan atau -9999999
+                    const voteElement = x.querySelector(
+                        'div[style="margin-top:5px;cursor:pointer"] span'
+                    ); // Seleksi elemen span vote
+
+                    if (voteElement) {
+                        const rawVoteText = voteElement.textContent;
+                        // Cek jika teks konten vote adalah '-9999999'
+                        if (rawVoteText === "-9999999") {
+                            voteValue = "0"; // Ubah menjadi '0'
+                        } else {
+                            voteValue = rawVoteText; // Gunakan nilai asli jika bukan '-9999999'
                         }
-                    })
+                    }
+                    // --- Akhir Logic untuk Vote Count ---
+
+                    data.push({
+                        date: x.querySelector("abbr").getAttribute("title"),
+                        title: x.querySelector('a[target="_blank"] > h3')
+                            .textContent,
+                        media:
+                            media !== null && media.startsWith("/")
+                                ? BASE_URL + media
+                                : media,
+                        source: x.querySelectorAll("div.blur")[1].textContent,
+                        vote: voteValue, // Gunakan nilai vote yang sudah diproses
+                        post:
+                            x
+                                .getElementsByTagName("fb:comments-count")[0]
+                                ?.getAttribute("href") || null, // Menambahkan optional chaining
+                        gif:
+                            x.querySelector("div.giphy_div") !== null
+                                ? true
+                                : false,
+                        nsfw: /not safe for work/i.test(x.innerHTML), // Membuat case-insensitive
+                        author: {
+                            user:
+                                x.querySelector(
+                                    'a[style="display:inline;background:none"] > b'
+                                ) !== null
+                                    ? x.querySelector(
+                                            'a[style="display:inline;background:none"] > b'
+                                        ).textContent.trim()
+                                    : null,
+                            url:
+                                x.querySelector(
+                                    'a[style="display:inline;background:none"]'
+                                ) !== null
+                                    ? BASE_URL +
+                                        x.querySelector(
+                                            'a[style="display:inline;background:none"]'
+                                        ).getAttribute("href")
+                                    : null,
+                        },
+                    });
                 }
-                return data
+
+                // --- Ambil Link Pagination (dari modifikasi sebelumnya) ---
+                let nextPageUrl = null;
+                const nextPageElement = dom.getElementById("next_page_link");
+                if (nextPageElement) {
+                    nextPageUrl = nextPageElement.getAttribute("href");
+                    if (nextPageUrl && nextPageUrl.startsWith("/")) {
+                        nextPageUrl = BASE_URL + nextPageUrl;
+                    }
+                }
+                // --- Akhir Link Pagination ---
+
+                // Kembalikan objek yang berisi data item dan link halaman berikutnya
+                return {
+                    items: data, // Menggunakan 'items' seperti sebelumnya
+                    nextPage: nextPageUrl,
+                };
             } else {
                 return {
                     status: false,
-                    msg: 'mode tidak tersedia, list mode => vote|legendary|lol|trending'
-                }
+                    msg: "mode tidak tersedia, list mode => vote|legendary|lol|trending",
+                };
             }
         } catch (error) {
-            console.log(error);
+            console.error("Error in section:", error); // Menggunakan console.error
+            // Mengembalikan objek error yang lebih informatif
+            return {
+                status: false,
+                msg: "An error occurred while fetching data",
+                error: error.message,
+            };
         }
     }
 
