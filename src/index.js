@@ -108,10 +108,29 @@ class Wancak {
      */
     async nsfw(mode) {
         try {
-            const { data } = await axios.get('https://1cak.com/recent&setSave=' + mode)
-            return data
+            const headers = {
+                "accept": "*/*",
+                "accept-language": "en-US,en;q=0.9,id-ID;q=0.8,id;q=0.7",
+                "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+                "sec-ch-ua-mobile": "?0",
+                "sec-ch-ua-platform": '"Windows"',
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "x-requested-with": "XMLHttpRequest",
+                "cookie": this.#cookie,
+                "Referer": "https://1cak.com/",
+            };
+
+            const { data } = await axios.get('https://1cak.com/recent&setSave=' + mode, {
+                headers: headers
+            });
+            return data;
         } catch (error) {
-            throw error
+            if (error.response?.data === 'login') {
+                throw new Error('Login required - Please provide valid cookie');
+            }
+            throw error;
         }
     }
 
