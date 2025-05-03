@@ -845,6 +845,83 @@ class Wancak {
             };
         }
     }
+
+    /**
+     * Add a comment to a post
+     * @param {Object} params Comment parameters
+     * @param {string|number} params.postId The ID of the post to comment on
+     * @param {string} params.comment The comment text
+     * @param {string|number} [params.replyId] Optional ID of the comment to reply to
+     * @param {string|number} [params.parentId] Optional ID of the parent comment when replying
+     * @returns {Promise<Object>} Comment result
+     */
+    async addComment({ postId, comment, replyId = "", parentId = "" }) {
+        try {
+            // First get the post page to extract credentials
+            const res = await axios.get(`${BASE_URL}/${postId}`, {
+                headers: this.#headers,
+            });
+
+            // Extract credentials from script tag
+            const hashMatch = res.data.match(/var hash_comment='([^']+)'/);
+            const userNameMatch = res.data.match(
+                /var user_name_comment='([^']+)'/
+            );
+            const userIdMatch = res.data.match(/var user_id_comment='([^']+)'/);
+
+            const hash = hashMatch ? hashMatch[1] : null;
+            const userName = userNameMatch ? userNameMatch[1] : null;
+            const userId = userIdMatch ? userIdMatch[1] : null;
+
+            if (!userId || !userName || !hash) {
+                throw new Error("Could not extract user credentials from page");
+            }
+
+            const headers = {
+                accept: "*/*",
+                "accept-language": "en-US,en;q=0.9,id-ID;q=0.8,id;q=0.7",
+                "content-type": "text/plain;charset=UTF-8",
+                "sec-ch-ua":
+                    '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+                "sec-ch-ua-mobile": "?1",
+                "sec-ch-ua-platform": '"Android"',
+                "sec-fetch-dest": "empty",
+                "sec-fetch-mode": "cors",
+                "sec-fetch-site": "same-origin",
+                "x-requested-with": "XMLHttpRequest",
+                cookie: this.#cookie,
+                Referer: `${BASE_URL}/${postId}`,
+            };
+
+            const url = new URL(`${BASE_URL}/cdn16/1cak_comment.php`);
+            url.searchParams.append("post_id", postId);
+            url.searchParams.append("user_id", userId);
+            url.searchParams.append("comment_reply_id", replyId);
+            url.searchParams.append("comment_reply_parent_id", parentId);
+            url.searchParams.append("user_name", userName);
+            url.searchParams.append("hash", hash);
+            url.searchParams.append("comment", comment);
+            url.searchParams.append("act", "add_comment");
+
+            const { data } = await axios.post(url.toString(), "", { headers });
+
+            if (data) {
+                return {
+                    status: true,
+                    msg: "Comment added successfully",
+                    postId,
+                    comment,
+                };
+            }
+        } catch (error) {
+            console.error("Error in addComment:", error);
+            return {
+                status: false,
+                msg: "An error occurred while adding comment",
+                error: error.message,
+            };
+        }
+    }
 }
 
 module.exports = Wancak;
