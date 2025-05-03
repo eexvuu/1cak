@@ -1,6 +1,6 @@
 const { default: axios } = require('axios');
 const { JSDOM } = require('jsdom')
-const BASE_URL = 'http://1cak.com';
+const BASE_URL = 'https://1cak.com';
 
 class Wancak {
     #headers;
@@ -264,7 +264,7 @@ class Wancak {
      * 
      * @param {string} url
      */
-    async page(url) {
+    async pages(url) {
         try {
             const res = await axios.get(BASE_URL + "/" + url, {
                     headers: this.#headers,
@@ -373,6 +373,77 @@ class Wancak {
             return {
                 status: false,
                 msg: "An error occurred while fetching data",
+                error: error.message,
+            };
+        }
+    }
+
+        /**
+     * Get a single post by its ID
+     * @param {string|number} postId The ID of the post to fetch
+     * @returns {Promise<Object>} Post details
+     */
+    async getPost(postId) {
+        try {
+            const res = await axios.get(`${BASE_URL}/${postId}`, {
+                headers: this.#headers,
+            });
+            let dom = new JSDOM(res.data).window.document;
+
+            // Get the post container
+            const postContainer = dom.querySelector('div#content div[style="border-bottom:1px solid #eee;padding-bottom:10px;padding-top:10px"]');
+            
+            if (!postContainer) {
+                return {
+                    status: false,
+                    msg: "Post not found",
+                };
+            }
+
+            // Get media content
+            let gif = postContainer.querySelector("div.giphy_div");
+            let image = postContainer.querySelector("img");
+            let media = gif !== null 
+                ? await this.#getVideo(gif.innerHTML)
+                : image !== null
+                    ? image.getAttribute("src")
+                    : null;
+
+            // Get vote count
+            let voteValue = "0";
+            const voteElement = postContainer.querySelector(
+                'div[style="margin-top:5px;cursor:pointer"] span'
+            );
+            if (voteElement) {
+                const rawVoteText = voteElement.textContent;
+                voteValue = rawVoteText === "-9999999" ? "0" : rawVoteText;
+            }
+
+            // Build post data
+            const postData = {
+                id: postId,
+                date: postContainer.querySelector("abbr")?.getAttribute("title"),
+                title: postContainer.querySelector('table > tbody > tr > td > div:nth-child(3) > h3')?.textContent || postContainer.querySelector('table > tbody > tr > td > div:nth-child(2) > h3')?.textContent,
+                media: media !== null && media.startsWith("/") ? BASE_URL + media : media,
+                source: postContainer.querySelector("div.blur")?.childNodes[2]?.textContent?.trim(),
+                vote: voteValue,
+                gif: gif !== null,
+                nsfw: /not safe for work/i.test(postContainer.innerHTML),
+                author: {
+                    user: postContainer.querySelector('a[style="display:inline;background:none"] > b')?.textContent.trim(),
+                    url: postContainer.querySelector('a[style="display:inline;background:none"]')
+                        ? BASE_URL + postContainer.querySelector('a[style="display:inline;background:none"]').getAttribute("href")
+                        : null,
+                }
+            };
+
+            return postData;
+
+        } catch (error) {
+            console.error("Error in getPost:", error);
+            return {
+                status: false,
+                msg: "An error occurred while fetching the post",
                 error: error.message,
             };
         }
