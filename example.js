@@ -2,21 +2,41 @@ const Wancak = require('./src')
 const jihan = new Wancak('cookie');
 
 // search post by keyword
-jihan.search('jihan jahat banget').then(res => {
-    console.log(res);
-})
+(async () => {
+    try {
+        const res = await jihan.search('jihan jahat banget');
+        console.log("Search results:", res);
+    } catch (error) {
+        console.error("Error during search:", error.message);
+    }
+})();
 
 // shuffle atau random
-jihan.shuffle().then(res => {
-    console.log(res);
-})
+(async () => {
+    try {
+        const res = await jihan.shuffle();
+        console.log("Shuffle results:", res);
+    } catch (error) {
+        console.error("Error during shuffle:", error.message);
+    }
+})();
 
 // mencari post berdasarkan section
-jihan.section('trending').then(res => {
-    console.log(res);
-})
+(async () => {
+    try {
+        const res = await jihan.section('trending');
+        console.log("Section results:", res);
+    } catch (error) {
+        console.error("Error during section call:", error.message);
+    }
+})();
 
 // set nfsw on / off
-jihan.nsfw(1).then(res => {
-    console.log(res);
-})
+(async () => {
+    try {
+        const res = await jihan.nsfw(true); // Changed 1 to true
+        console.log("NSFW mode set:", res);
+    } catch (error) {
+        console.error("Error setting NSFW mode:", error.message);
+    }
+})();

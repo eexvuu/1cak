@@ -87,7 +87,8 @@ class Wancak {
                     .join("; ");
             }
             console.error("Error in getCookie:", error.message);
-            return null;
+            // return null; // Original line
+            throw new Error(`Failed to get cookie: ${error.message}`);
         }
     };
 
@@ -100,16 +101,17 @@ class Wancak {
                 .querySelectorAll("source")[1]
                 .getAttribute("src");
         } catch (error) {
-            console.log(error);
-            return "https://1cak.com/images/unsave.jpg";
+            // console.log(error); // Original line
+            // return "https://1cak.com/images/unsave.jpg"; // Original line
+            throw new Error(`Failed to get video from ${url}: ${error.message}`);
         }
     }
 
     /**
      * set nfsw mode
-     * @param {0|1} mode // 1 = on | 0 = off
+     * @param {boolean} enableNsfw // true = on | false = off
      */
-    async nsfw(mode) {
+    async nsfw(enableNsfw) {
         try {
             const headers = {
                 accept: "*/*",
@@ -127,7 +129,7 @@ class Wancak {
             };
 
             const { data } = await axios.get(
-                "https://1cak.com/recent&setSave=" + mode,
+                "https://1cak.com/recent&setSave=" + (enableNsfw ? 1 : 0),
                 {
                     headers: headers,
                 }
@@ -154,7 +156,7 @@ class Wancak {
                 });
                 let dom = new JSDOM(res.data).window.document;
 
-                let asu = [
+                let postElements = [
                     ...dom
                         .getElementById("content")
                         .querySelectorAll(
@@ -163,12 +165,12 @@ class Wancak {
                 ];
 
                 let data = [];
-                for (let x of asu) {
+                for (let postElement of postElements) {
                     let gif =
-                        x.querySelector("div.giphy_div") == null
+                        postElement.querySelector("div.giphy_div") == null
                             ? null
-                            : x.querySelector("div.giphy_div").innerHTML;
-                    let image = x.querySelector("img");
+                            : postElement.querySelector("div.giphy_div").innerHTML;
+                    let image = postElement.querySelector("img");
                     let media =
                         gif !== null
                             ? await this.#getVideo(gif)
@@ -178,7 +180,7 @@ class Wancak {
 
                     // --- Logic untuk Vote Count ---
                     let voteValue = "0"; // Nilai default jika elemen tidak ditemukan atau -9999999
-                    const voteElement = x.querySelector(
+                    const voteElement = postElement.querySelector(
                         'div[style="margin-top:5px;cursor:pointer"] span'
                     ); // Seleksi elemen span vote
 
@@ -194,41 +196,41 @@ class Wancak {
                     // --- Akhir Logic untuk Vote Count ---
 
                     data.push({
-                        date: x.querySelector("abbr").getAttribute("title"),
-                        title: x.querySelector('a[target="_blank"] > h3')
+                        date: postElement.querySelector("abbr").getAttribute("title"),
+                        title: postElement.querySelector('a[target="_blank"] > h3')
                             .textContent,
                         media:
                             media !== null && media.startsWith("/")
                                 ? BASE_URL + media
                                 : media,
-                        source: x.querySelectorAll("div.blur")[1].textContent,
+                        source: postElement.querySelectorAll("div.blur")[1].textContent,
                         vote: voteValue, // Gunakan nilai vote yang sudah diproses
                         post:
-                            x
+                            postElement
                                 .getElementsByTagName("fb:comments-count")[0]
                                 ?.getAttribute("href") || null, // Menambahkan optional chaining
                         gif:
-                            x.querySelector("div.giphy_div") !== null
+                            postElement.querySelector("div.giphy_div") !== null
                                 ? true
                                 : false,
-                        nsfw: /not safe for work/i.test(x.innerHTML), // Membuat case-insensitive
+                        nsfw: /not safe for work/i.test(postElement.innerHTML), // Membuat case-insensitive
                         author: {
                             user:
-                                x.querySelector(
+                                postElement.querySelector(
                                     'a[style="display:inline;background:none"] > b'
                                 ) !== null
-                                    ? x
+                                    ? postElement
                                           .querySelector(
                                               'a[style="display:inline;background:none"] > b'
                                           )
                                           .textContent.trim()
                                     : null,
                             url:
-                                x.querySelector(
+                                postElement.querySelector(
                                     'a[style="display:inline;background:none"]'
                                 ) !== null
                                     ? BASE_URL +
-                                      x
+                                      postElement
                                           .querySelector(
                                               'a[style="display:inline;background:none"]'
                                           )
@@ -255,19 +257,21 @@ class Wancak {
                     nextPage: nextPageUrl,
                 };
             } else {
-                return {
-                    status: false,
-                    msg: "mode tidak tersedia, list mode => vote|legendary|lol|trending",
-                };
+                // return { // Original lines
+                //     status: false,
+                //     msg: "mode tidak tersedia, list mode => vote|legendary|lol|trending",
+                // };
+                throw new Error("Mode tidak tersedia, list mode => vote|legendary|lol|trending");
             }
         } catch (error) {
-            console.error("Error in section:", error); // Menggunakan console.error
-            // Mengembalikan objek error yang lebih informatif
-            return {
-                status: false,
-                msg: "An error occurred while fetching data",
-                error: error.message,
-            };
+            // console.error("Error in section:", error); // Menggunakan console.error // Original line
+            // Mengembalikan objek error yang lebih informatif // Original line
+            // return { // Original lines
+            //     status: false,
+            //     msg: "An error occurred while fetching data",
+            //     error: error.message,
+            // };
+            throw new Error(`An error occurred while fetching section data: ${error.message}`);
         }
     }
 
@@ -282,7 +286,7 @@ class Wancak {
             });
             let dom = new JSDOM(res.data).window.document;
 
-            let asu = [
+            let postElements = [
                 ...dom
                     .getElementById("content")
                     .querySelectorAll(
@@ -291,12 +295,12 @@ class Wancak {
             ];
 
             let data = [];
-            for (let x of asu) {
+            for (let postElement of postElements) {
                 let gif =
-                    x.querySelector("div.giphy_div") == null
+                    postElement.querySelector("div.giphy_div") == null
                         ? null
-                        : x.querySelector("div.giphy_div").innerHTML;
-                let image = x.querySelector("img");
+                        : postElement.querySelector("div.giphy_div").innerHTML;
+                let image = postElement.querySelector("img");
                 let media =
                     gif !== null
                         ? await this.#getVideo(gif)
@@ -306,7 +310,7 @@ class Wancak {
 
                 // --- Logic untuk Vote Count ---
                 let voteValue = "0"; // Nilai default jika elemen tidak ditemukan atau -9999999
-                const voteElement = x.querySelector(
+                const voteElement = postElement.querySelector(
                     'div[style="margin-top:5px;cursor:pointer"] span'
                 ); // Seleksi elemen span vote
 
@@ -324,17 +328,17 @@ class Wancak {
                 // Special handling for source when URL starts with "of-"
                 let source;
                 if (url.startsWith("of-")) {
-                    const sourceDiv = x.querySelector(
+                    const sourceDiv = postElement.querySelector(
                         "#vote_td_2882598 > div:nth-child(5)"
                     );
                     source = sourceDiv?.textContent || "";
                 } else {
-                    source = x.querySelectorAll("div.blur")[1]?.textContent;
+                    source = postElement.querySelectorAll("div.blur")[1]?.textContent;
                 }
 
                 data.push({
-                    date: x.querySelector("abbr")?.getAttribute("title"),
-                    title: x.querySelector('a[target="_blank"] > h3')
+                    date: postElement.querySelector("abbr")?.getAttribute("title"),
+                    title: postElement.querySelector('a[target="_blank"] > h3')
                         ?.textContent,
                     media:
                         media !== null && media.startsWith("/")
@@ -343,22 +347,22 @@ class Wancak {
                     source: source,
                     vote: voteValue,
                     post:
-                        x
+                        postElement
                             .getElementsByTagName("fb:comments-count")[0]
                             ?.getAttribute("href") || null,
-                    gif: x.querySelector("div.giphy_div") !== null,
-                    nsfw: /not safe for work/i.test(x.innerHTML),
+                    gif: postElement.querySelector("div.giphy_div") !== null,
+                    nsfw: /not safe for work/i.test(postElement.innerHTML),
                     author: {
-                        user: x
+                        user: postElement
                             .querySelector(
                                 'a[style="display:inline;background:none"] > b'
                             )
                             ?.textContent?.trim(),
-                        url: x.querySelector(
+                        url: postElement.querySelector(
                             'a[style="display:inline;background:none"]'
                         )
                             ? BASE_URL +
-                              x
+                              postElement
                                   .querySelector(
                                       'a[style="display:inline;background:none"]'
                                   )
@@ -413,10 +417,11 @@ class Wancak {
             );
 
             if (!postContainer) {
-                return {
-                    status: false,
-                    msg: "Post not found",
-                };
+                // return { // Original lines
+                //     status: false,
+                //     msg: "Post not found",
+                // };
+                throw new Error("Post not found");
             }
 
             // Get media content
@@ -445,13 +450,7 @@ class Wancak {
                 date: postContainer
                     .querySelector("abbr")
                     ?.getAttribute("title"),
-                title:
-                    postContainer.querySelector(
-                        "table > tbody > tr > td > div:nth-child(3) > h3"
-                    )?.textContent ||
-                    postContainer.querySelector(
-                        "table > tbody > tr > td > div:nth-child(2) > h3"
-                    )?.textContent,
+                title: postContainer.querySelector("h3")?.textContent,
                 media:
                     media !== null && media.startsWith("/")
                         ? BASE_URL + media
@@ -483,12 +482,13 @@ class Wancak {
 
             return postData;
         } catch (error) {
-            console.error("Error in getPost:", error);
-            return {
-                status: false,
-                msg: "An error occurred while fetching the post",
-                error: error.message,
-            };
+            // console.error("Error in getPost:", error); // Original line
+            // return { // Original lines
+            //     status: false,
+            //     msg: "An error occurred while fetching the post",
+            //     error: error.message,
+            // };
+            throw new Error(`An error occurred while fetching the post ${postId}: ${error.message}`);
         }
     }
 
@@ -498,49 +498,49 @@ class Wancak {
                 headers: this.#headers,
             });
             let dom = new JSDOM(res.data).window.document;
-            let asu = [
+            let postElements = [
                 ...dom
                     .getElementById("content")
                     .querySelectorAll(
                         'div[style="border-bottom:1px solid #eee;padding-bottom:10px;padding-top:10px"]'
                     ),
-            ]; //.map(x => x.querySelector('img')).filter(x => x !== null)
+            ]; //.map(postElement => postElement.querySelector('img')).filter(postElement => postElement !== null)
             let data = [];
-            for (let x of asu) {
+            for (let postElement of postElements) {
                 data.push({
-                    date: x.querySelector("abbr").getAttribute("title"),
-                    title: x.querySelector('h3[style="margin-top:-4px"]')
+                    date: postElement.querySelector("abbr").getAttribute("title"),
+                    title: postElement.querySelector('h3[style="margin-top:-4px"]')
                         .textContent,
                     media:
-                        x.querySelector("div.giphy_div") !== null
+                        postElement.querySelector("div.giphy_div") !== null
                             ? await this.#getVideo(
-                                  x.querySelector("div.giphy_div").innerHTML
+                                  postElement.querySelector("div.giphy_div").innerHTML
                               )
-                            : x.querySelector("img").getAttribute("src"),
-                    source: x.querySelectorAll("div.blur")[0].childNodes[2]
+                            : postElement.querySelector("img").getAttribute("src"),
+                    source: postElement.querySelectorAll("div.blur")[0].childNodes[2]
                         .textContent,
-                    vote: x
+                    vote: postElement
                         .querySelectorAll("div.blur")[1]
                         .querySelectorAll("span")[0].textContent,
-                    post: x
+                    post: postElement
                         .getElementsByTagName("fb:comments-count")[0]
                         .getAttribute("href"),
                     gif:
-                        x.querySelector("div.giphy_div") !== null
+                        postElement.querySelector("div.giphy_div") !== null
                             ? true
                             : false,
                     nsfw: /Not safe for work|Not save for work/g.test(
-                        x.innerHTML
+                        postElement.innerHTML
                     ),
                     author: {
-                        user: x
+                        user: postElement
                             .querySelector(
                                 'a[style="display:inline;background:none"] > b'
                             )
                             .textContent.trim(),
                         url:
                             BASE_URL +
-                            x
+                            postElement
                                 .querySelector(
                                     'a[style="display:inline;background:none"]'
                                 )
@@ -566,24 +566,24 @@ class Wancak {
                 { headers: this.#headers }
             );
             let dom = new JSDOM(res.data).window.document;
-            let asu = [
+            let postElements = [
                 ...dom
                     .getElementById("content")
                     .querySelectorAll(
                         'div[style="border-bottom:1px solid #ccc;padding-bottom:10px;padding-top:10px"]'
                     ),
-            ]; //.map(x => x.querySelector('img')).filter(x => x !== null)
+            ]; //.map(postElement => postElement.querySelector('img')).filter(postElement => postElement !== null)
             let data = [];
-            for (let x of asu) {
+            for (let postElement of postElements) {
                 //console.log(/rizkybarjo/.test(dom.textContent));
                 let gif =
-                    x.querySelector("div.giphy_div") == null
+                    postElement.querySelector("div.giphy_div") == null
                         ? null
-                        : x.querySelector("div.giphy_div").innerHTML;
-                let image = x.querySelector("img");
+                        : postElement.querySelector("div.giphy_div").innerHTML;
+                let image = postElement.querySelector("img");
                 data.push({
-                    date: x.querySelector("abbr").getAttribute("title"),
-                    title: x.querySelector('a[target="_blank"] > h3')
+                    date: postElement.querySelector("abbr").getAttribute("title"),
+                    title: postElement.querySelector('a[target="_blank"] > h3')
                         .textContent,
                     media:
                         gif !== null
@@ -591,32 +591,32 @@ class Wancak {
                             : image !== null
                             ? image.getAttribute("src")
                             : null,
-                    //media: x.querySelector('source') !== null ? x.querySelectorAll('source')[1].getAttribute('src') == null ? null : x.querySelectorAll('source')[1].getAttribute('src') : x.querySelector('a[target="_blank"]').innerHTML,
-                    source: x.querySelectorAll("div.blur")[1].textContent,
-                    vote: x
+                    //media: postElement.querySelector('source') !== null ? postElement.querySelectorAll('source')[1].getAttribute('src') == null ? null : postElement.querySelectorAll('source')[1].getAttribute('src') : postElement.querySelector('a[target="_blank"]').innerHTML,
+                    source: postElement.querySelectorAll("div.blur")[1].textContent,
+                    vote: postElement
                         .querySelector(
                             'div[style="margin-top:5px;cursor:pointer"]'
                         )
                         .querySelector("span").textContent,
-                    post: x
+                    post: postElement
                         .getElementsByTagName("fb:comments-count")[0]
                         .getAttribute("href"),
                     gif:
-                        x.querySelector("div.giphy_div") !== null
+                        postElement.querySelector("div.giphy_div") !== null
                             ? true
                             : false,
                     nsfw: /Not safe for work|Not save for work/g.test(
-                        x.innerHTML
+                        postElement.innerHTML
                     ),
                     author: {
-                        user: x
+                        user: postElement
                             .querySelector(
                                 'a[style="display:inline;background:none"] > b'
                             )
                             .textContent.trim(),
                         url:
                             BASE_URL +
-                            x
+                            postElement
                                 .querySelector(
                                     'a[style="display:inline;background:none"]'
                                 )
@@ -641,36 +641,53 @@ class Wancak {
                     postId
             );
             let dom = new JSDOM(data).window.document;
-            //let comment = [...dom.getElementById('comment_1cak_' + id).querySelector('div > div').querySelectorAll('div[style="margin-bottom:10px;overflow:hidden"]')]
+            //let commentElements = [...dom.getElementById('comment_1cak_' + id).querySelector('div > div').querySelectorAll('div[style="margin-bottom:10px;overflow:hidden"]')]
             //style="margin:5px"
-            let comment = [
+            let commentElements = [
                 ...dom
                     .querySelector('div[style="margin:5px"]')
                     .querySelectorAll(
                         'div[style="margin-bottom:10px;overflow:hidden"]'
                     ),
             ];
-            let ndasmu = [];
-            for (let x of comment) {
-                ndasmu.push({
+            let comments = [];
+            for (let commentElement of commentElements) {
+                comments.push({
                     author: {
-                        user: x.querySelector("span > a > b").textContent,
+                        user: commentElement.querySelector("span > a > b").textContent,
                     },
-                    parent_comment_id: x
+                    parent_comment_id: commentElement
                         .querySelector("span")
                         .getAttribute("id")
                         .match(/\d+/)[0],
-                    hasMedia: /img src/g.test(x.innerHTML),
-                    media: /img src/g.test(x.innerHTML)
-                        ? x.querySelector("img").getAttribute("src")
+                    hasMedia: /img src/g.test(commentElement.innerHTML),
+                    media: /img src/g.test(commentElement.innerHTML)
+                        ? commentElement.querySelector("img").getAttribute("src")
                         : null,
-                    date: x.querySelector("abbr").getAttribute("title"),
-                    text: /<br>(.*?)[<|\n]/g
-                        .exec(x.querySelector("span").innerHTML)[1]
-                        .trim(),
+                    date: commentElement.querySelector("abbr").getAttribute("title"),
+                    text: (() => {
+                        const commentSpan = commentElement.querySelector("span");
+                        if (!commentSpan) return "";
+                        let text = "";
+                        let collect = false;
+                        for (const node of commentSpan.childNodes) {
+                            if (node.nodeName.toLowerCase() === 'br') {
+                                collect = true;
+                                continue;
+                            }
+                            if (collect && node.nodeType === 3) { // Node.TEXT_NODE
+                                text += node.nodeValue;
+                            }
+                            // Optionally handle other element nodes within comment text, e.g., images/emojis
+                            // if (collect && node.nodeType === 1 && node.nodeName.toLowerCase() === 'img') {
+                            //     text += node.getAttribute('alt') || '[image]';
+                            // }
+                        }
+                        return text.trim();
+                    })(),
                 });
             }
-            return ndasmu;
+            return comments;
         } catch (error) {
             throw error;
         }
@@ -691,34 +708,51 @@ class Wancak {
                     parentCommentId
             );
             let dom = new JSDOM(data).window.document;
-            //let comment = [...dom.getElementById('comment_1cak_' + id).querySelector('div > div').querySelectorAll('div[style="margin-bottom:10px;overflow:hidden"]')]
+            //let commentElements = [...dom.getElementById('comment_1cak_' + id).querySelector('div > div').querySelectorAll('div[style="margin-bottom:10px;overflow:hidden"]')]
             //style="margin:5px"
-            let comment = [
+            let commentElements = [
                 ...dom.querySelectorAll(
                     'div[style="margin-bottom:10px;overflow:hidden"]'
                 ),
             ];
-            let ndasmu = [];
-            for (let x of comment) {
-                ndasmu.push({
+            let comments = [];
+            for (let commentElement of commentElements) {
+                comments.push({
                     author: {
-                        user: x.querySelector("span > a > b").textContent,
+                        user: commentElement.querySelector("span > a > b").textContent,
                     },
-                    parent_comment_id: x
+                    parent_comment_id: commentElement
                         .querySelector("span")
                         .getAttribute("id")
                         .match(/\d+/)[0],
-                    hasMedia: /img src/g.test(x.innerHTML),
-                    media: /img src/g.test(x.innerHTML)
-                        ? x.querySelector("img").getAttribute("src")
+                    hasMedia: /img src/g.test(commentElement.innerHTML),
+                    media: /img src/g.test(commentElement.innerHTML)
+                        ? commentElement.querySelector("img").getAttribute("src")
                         : null,
-                    date: x.querySelector("abbr").getAttribute("title"),
-                    text: /<br>(.*?)[<|\n]/g
-                        .exec(x.querySelector("span").innerHTML)[1]
-                        .trim(),
+                    date: commentElement.querySelector("abbr").getAttribute("title"),
+                    text: (() => {
+                        const commentSpan = commentElement.querySelector("span");
+                        if (!commentSpan) return "";
+                        let text = "";
+                        let collect = false;
+                        for (const node of commentSpan.childNodes) {
+                            if (node.nodeName.toLowerCase() === 'br') {
+                                collect = true;
+                                continue;
+                            }
+                            if (collect && node.nodeType === 3) { // Node.TEXT_NODE
+                                text += node.nodeValue;
+                            }
+                            // Optionally handle other element nodes within comment text, e.g., images/emojis
+                            // if (collect && node.nodeType === 1 && node.nodeName.toLowerCase() === 'img') {
+                            //     text += node.getAttribute('alt') || '[image]';
+                            // }
+                        }
+                        return text.trim();
+                    })(),
                 });
             }
-            return ndasmu;
+            return comments;
         } catch (error) {
             throw error;
         }
@@ -769,19 +803,21 @@ class Wancak {
                     postId,
                 };
             } else {
-                return {
-                    status: false,
-                    msg: "Vote action failed",
-                    error: data,
-                };
+                // return { // Original lines
+                //     status: false,
+                //     msg: "Vote action failed",
+                //     error: data,
+                // };
+                throw new Error(`Vote action failed for post ${postId}: ${data}`);
             }
         } catch (error) {
-            console.error("Error in fun:", error);
-            return {
-                status: false,
-                msg: "An error occurred while voting",
-                error: error.message,
-            };
+            // console.error("Error in fun:", error); // Original line
+            // return { // Original lines
+            //     status: false,
+            //     msg: "An error occurred while voting",
+            //     error: error.message,
+            // };
+            throw new Error(`An error occurred while voting for post ${postId}: ${error.message}`);
         }
     }
 
@@ -830,19 +866,21 @@ class Wancak {
                     postId,
                 };
             } else {
-                return {
-                    status: false,
-                    msg: "Downvote action failed",
-                    error: data,
-                };
+                // return { // Original lines
+                //     status: false,
+                //     msg: "Downvote action failed",
+                //     error: data,
+                // };
+                throw new Error(`Downvote action failed for post ${postId}: ${data}`);
             }
         } catch (error) {
-            console.error("Error in nuf:", error);
-            return {
-                status: false,
-                msg: "An error occurred while downvoting",
-                error: error.message,
-            };
+            // console.error("Error in nuf:", error); // Original line
+            // return { // Original lines
+            //     status: false,
+            //     msg: "An error occurred while downvoting",
+            //     error: error.message,
+            // };
+            throw new Error(`An error occurred while downvoting for post ${postId}: ${error.message}`);
         }
     }
 
@@ -915,11 +953,12 @@ class Wancak {
             }
         } catch (error) {
             console.error("Error in addComment:", error);
-            return {
-                status: false,
-                msg: "An error occurred while adding comment",
-                error: error.message,
-            };
+            // return { // Original lines
+            //     status: false,
+            //     msg: "An error occurred while adding comment",
+            //     error: error.message,
+            // };
+            throw new Error(`An error occurred while adding comment to post ${postId}: ${error.message}`);
         }
     }
 }
